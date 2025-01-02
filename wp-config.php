@@ -85,6 +85,12 @@ $table_prefix = 'wp_';
  *
  * @link https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/
  */
+
+
+define('JWT_AUTH_SECRET_KEY', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0L215d3AvcG9seW1lci1zdG9uZSIsImlhdCI6MTczNTU5MzExMSwibmJmIjoxNzM1NTkzMTExLCJleHAiOjE3MzYxOTc5MTEsImRhdGEiOnsidXNlciI6eyJpZCI6IjEifX19.TtJZNN6vlOVkBsiw8iN1osGGgYT_s0Pd7Aa-OQS3AgA'); 
+define('JWT_AUTH_CORS_ENABLE', true); 
+
+
 define( 'WP_DEBUG', false );
 
 /* Add any custom values between this line and the "stop editing" line. */

@@ -176,3 +176,194 @@ if ( defined( 'JETPACK__VERSION' ) ) {
 	require get_template_directory() . '/inc/jetpack.php';
 }
 
+
+
+
+/********************************************************************************/
+ 
+// Подклучаим api для WP
+function enqueue_wp_api_script() {
+    wp_enqueue_script('wp-api');
+}
+add_action('wp_enqueue_scripts', 'enqueue_wp_api_script');
+
+
+
+//Action для Токена 
+add_action('rest_api_init', function () {
+
+    register_rest_route('custom/v1', '/get-token', [
+        'methods' => 'GET',
+        'callback' => function () {
+            $username = 'wp_harut';
+            $password = '*m0KUkquh3dHoTqr)b';
+
+            $response = wp_remote_post(get_rest_url() . 'jwt-auth/v1/token', [
+                'body' => [
+                    'username' => $username,
+                    'password' => $password,
+                ],
+            ]);
+
+            $body = wp_remote_retrieve_body($response);
+
+            if (wp_remote_retrieve_response_code($response) === 200) {
+                return json_decode($body);
+            } else {
+                return new WP_Error('token_error', 'Ошибка получения токена', ['status' => 403]);
+            }
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
+// WPDB Create Table создаем таблицу 
+function ajax_create_table() {
+	global $wpdb;
+
+	$table_name = $wpdb->prefix . $_POST['name'];
+
+	$charset_collate = $wpdb->get_charset_collate();
+	$sql = "CREATE TABLE $table_name (
+	    id mediumint(9) NOT NULL AUTO_INCREMENT,
+	    column1 varchar(255) NOT NULL,
+	    column2 text NOT NULL,
+	    PRIMARY KEY  (id)
+	) $charset_collate;";
+
+	require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+
+	dbDelta($sql);
+
+	die();
+}
+add_action('wp_ajax_create_table', 'ajax_create_table');
+add_action('wp_ajax_nopriv_create_table', 'ajax_create_table');
+
+
+
+// WPDB Insert row this colum
+function ajax_insert_row() {
+
+	global $wpdb;
+
+	$colum1 = $_POST['colum1'];	
+	$colum2 = $_POST['colum2'];	
+
+	$table_name = $wpdb->prefix . 'bookings'; // замените 'my_table' на вашу таблицу
+
+	$data = array(
+	    'column1' => $colum1, // замените column1 на имя вашего столбца
+	    'column2' => $colum2, // замените column2 на имя вашего столбца
+	);
+
+	$format = array('%s', '%s'); // %s для строки, %d для целого числа
+
+	// Добавление записи в таблицу
+	$wpdb->insert($table_name, $data, $format);
+
+	// Проверка на ошибки
+	if ($wpdb->last_error) {
+	    echo 'Ошибка при добавлении записи: ' . $wpdb->last_error;
+	} else {
+	    echo 'Запись успешно добавлена';
+	}	
+
+	die();
+}
+add_action('wp_ajax_insert_row', 'ajax_insert_row');
+add_action('wp_ajax_nopriv_insert_row', 'ajax_insert_row');
+
+
+
+
+
+
+// WPDB update
+function ajax_update() {
+
+	global $wpdb;
+
+	$table_name = $wpdb->prefix . 'posts';
+
+	$wpdb->update( 
+	    $table_name, 
+	    array( 
+	        'post_title' => 'Updated Title' // Обновляемое значение
+	    ),
+	    array( 
+	        'ID' => 1 // Условие обновления
+	    ),
+	    array( 
+	        '%s' // Формат для 'post_title'
+	    ),
+	    array( 
+	        '%d' // Формат для 'ID'
+	    )
+	);
+	
+	
+	die();
+}
+add_action('wp_ajax_update', 'ajax_update');
+add_action('wp_ajax_nopriv_update', 'ajax_update');
+
+
+
+
+// WPDB Delete
+function ajax_delete() {
+
+	global $wpdb;
+
+	$table_name = $wpdb->prefix . 'posts';
+
+	$wpdb->delete( 
+	    $table_name, 
+	    array( 'ID' => 1 )
+	);
+
+	die();
+}
+
+add_action('wp_ajax_delete', 'ajax_delete');
+add_action('wp_ajax_nopriv_delete', 'ajax_delete');
+
+
+
+
+//******** Создаем ROUT  - http://localhost/mywp/harut/wp-json/custom/v1/bookings *************//
+function bookings_rest_route() {
+    register_rest_route( 'custom/v1', '/bookings', array(
+        'methods' => 'GET',
+        'callback' => function ( $data ) {
+            // Пример возвращаемого ответа. Замените на вашу логику получения данных из базы.
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'bookings';
+            $results = $wpdb->get_results( "SELECT * FROM $table_name" );
+
+            // Проверяем, есть ли записи
+            if ( empty( $results ) ) {
+                return new WP_REST_Response( 'No bookings found', 404 );
+            }
+
+            // Возвращаем данные в формате JSON
+            return new WP_REST_Response( $results, 200 );
+        },
+        'permission_callback' => '__return_true', // Для теста отключаем проверку прав доступа
+    ) );
+}
+
+add_action( 'rest_api_init', 'bookings_rest_route' );
